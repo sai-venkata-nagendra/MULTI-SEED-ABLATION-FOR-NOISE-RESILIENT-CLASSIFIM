@@ -1,9 +1,9 @@
-# Label-Smoothed Dual-Branch Classifier for a ClassiFIM-Style Estimate (Synthetic Toy Test)
+# Label-Smoothed Dual-Branch Classifier for a ClassiFIM-Style Estimate (Controlled Synthetic Experiment)
 
 **Author:** Surat Sai Venkata Nagendra Babu
 **Affiliation:** B.Tech in Computer Science and Engineering, Amrita Vishwa Vidyapeetham
 
-> **Status: exploratory learning exercise.** The data is synthetic and the comparison baseline is simple. This is not a test of the published ClassiFIM method on real quantum data. See [Limitations](#5-limitations).
+> **Status: proof-of-concept experiment.** The data is synthetic and the comparison baseline is simple. This is not a test of the published ClassiFIM method on real quantum data. See [Limitations](#5-limitations).
 
 ---
 
