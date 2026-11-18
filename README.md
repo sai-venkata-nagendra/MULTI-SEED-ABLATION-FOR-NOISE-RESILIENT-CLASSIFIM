@@ -43,8 +43,7 @@ In this repository, we integrate three architectural regularizers from our class
 ### Raw Unsmoothed Sweep ($\hat{\lambda}_c = 1.050$, 14x Lower Critical Point Error)
 ![Raw ClassiFIM Results](Lidar_ClassiFIM_Phase_Transition_Results.png)
 
-### Window-Conditioned Sweep ($R^2 = 0.6907$, 5.3x Lower MSE)
-![Window-Conditioned ClassiFIM Results](Lidar_ClassiFIM_Smooth_Results.png)
+
 
 ---
 
