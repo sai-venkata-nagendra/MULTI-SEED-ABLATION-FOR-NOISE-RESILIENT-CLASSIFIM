@@ -1,38 +1,44 @@
-# Label-Smoothed Dual-Branch Classifier for ClassiFIM-Style Estimation Under Readout Noise
+# Noise-Resilient ClassiFIM Ablation Under Simulated NISQ Readout Noise
 
 **Author:** Surat Sai Venkata Nagendra Babu, B.Tech CSE, Amrita Vishwa Vidyapeetham
 
-A proof-of-concept experiment inspired by ClassiFIM (Kasatkin, Mozgunov, Ezzell, Mishra, Hen & Lidar, [arXiv:2408.03323](https://arxiv.org/abs/2408.03323)). It uses synthetic data generated in the notebook.
+A 3-seed ablation study inspired by the `ClassiFIM` framework from Prof. Daniel Lidar's group at USC. It uses synthetic noisy 1D spin-chain snapshots generated in the notebook (not the public datasets from the paper cited below).
 
-## 1. Background
-ClassiFIM finds phase transitions without labels: a classifier is trained to tell apart data from two nearby parameter values (lambda - delta and lambda + delta). If it can do so easily, the data changes quickly there, which the Fisher information metric (FIM) measures; a peak marks a likely transition. The authors note that overconfident classifiers inflate the log-odds and use small L2 regularization to counter it.
+## 1. Motivation
+In **Kasatkin et al. (2024)** ([arXiv:2408.03323](https://arxiv.org/abs/2408.03323)), the authors estimate the Fisher Information Metric (FIM) $\chi_F(\lambda)$ by training a binary classifier to distinguish projective measurement bitstrings from neighboring parameter values $\lambda - \delta\lambda$ and $\lambda + \delta\lambda$, then computing the variance of the predicted log-odds:
 
-**Question:** do label smoothing, dual branches and model averaging keep the estimate stable when 6% of bits are flipped by readout noise?
+$$\chi_F(\lambda) \approx \frac{1}{(\Delta\lambda)^2} \operatorname{Var}\!\left[\ln\left(\frac{P(y=1 \mid x)}{1 - P(y=1 \mid x)}\right)\right]$$
 
-## 2. Setup (in the notebook)
-- **Data:** 16-spin chains, 31 values of lambda from 0.25 to 1.75, 600 samples each. A hand-written sigmoid sets the order, with the transition at lambda = 1.0; 6% of bits are flipped.
-- **Estimate:** variance of the classifier's log-odds divided by (2 * delta)^2 (a simplified version of the paper's estimator), compared with the squared derivative of the same sigmoid.
-- **Baseline:** MLP (two dense layers of 64), no regularization.
-- **Proposed:** two 1D convolution branches (standard and dilated), sigmoid attention gate, dropout, L2 (1e-3), label smoothing (0.08), average of 2 models.
+When bitstrings are corrupted by hardware readout (SPAM) bit-flips, unregularized MLPs can overfit to random noise in the disordered phase, pushing predicted probabilities toward $0$ or $1$ and causing log-odds variance explosion. This repository tests whether convolutional inductive bias and label smoothing (from our Springer LNEE medical-imaging work) stabilize FIM estimation under **8% simulated readout bit-flip noise**.
 
-## 3. Results (one run, seed 42, 3-point smoothing across lambda)
-| Metric vs. reference curve | Baseline MLP | Proposed |
-| :--- | ---: | ---: |
-| MSE | 0.1866 | **0.0353** |
-| R^2 | -0.6364 | **+0.6907** |
-| Estimated peak | 1.10 | 1.10 |
+## 2. Simulated Dataset (Generated in Notebook)
+- **System:** Synthetic 1D spin chain with $L = 20$ spins and an analytical susceptibility peak at $\lambda_c = 1.000$.
+- **Parameter sweep:** 31 grid points $\lambda \in [0.25, 1.75]$ ($\delta\lambda = 0.05$), $800$ shots per $\lambda$, 75/25 train/test split per adjacent pair.
+- **Readout noise:** Independent 8% bit-flip corruption applied to every spin measurement.
+- **Statistical rigor:** Repeated across 3 random seeds (`seeds = [42, 100, 2026]`), with 3-point local window smoothing `[0.25, 0.50, 0.25]` applied identically to all models before curve normalization.
 
-The proposed classifier follows the reference curve much more closely; both models place the peak at lambda = 1.10.
+## 3. Ablation Models
+1. **Unregularized MLP Baseline:** `Flatten` $\to$ `Dense(64)` $\to$ `Dense(64)` $\to$ `Sigmoid`, standard binary cross-entropy (`label_smoothing = 0.0`).
+2. **Standard 1D-CNN Ablation (No Label Smoothing):** Single-branch `Conv1D(32, k=3)` $\to$ `GlobalAveragePooling1D` $\to$ `Dense(32)` $\to$ `Sigmoid`, standard binary cross-entropy (`label_smoothing = 0.0`).
+3. **Proposed Dual-Branch + Label Smoothing + Consensus:** Local (`dilation=1`) + dilated (`dilation=2`) `Conv1D` branches with BatchNorm, sigmoid attention gating, $L_2$ decay ($10^{-3}$), binary cross-entropy with `label_smoothing = 0.08`, and a 2-model consensus average.
 
-![ClassiFIM results](ClassiFIM_Phase_Transition_Results.png)
+## 4. Results (3-Seed Mean ± Std, 20 Spins, 8% Readout Noise)
 
-## 4. Scope and next steps
-This version uses synthetic data, one run, and a simplified estimator. Next:
-1. Repeat over several seeds and noise levels, with error bars.
-2. Add an L2-only baseline (as in the paper) to isolate the effect of label smoothing.
-3. Use the public ClassiFIM datasets and the paper's own estimator.
-4. Test on exact transverse-field Ising snapshots.
+| Model | Critical Point Error $\|\hat{\lambda}_c - 1.00\|$ (↓) | Curve Fidelity $R^2$ (↑) | Curve MSE (↓) |
+| :--- | :---: | :---: | :---: |
+| **Unregularized MLP Baseline** | `0.283 ± 0.125` | `-0.8059 ± 0.1871` | `0.2059 ± 0.0213` |
+| **Standard 1D-CNN (No Label Smoothing)** | **`0.067 ± 0.047`** | **`+0.8780 ± 0.0250`** | **`0.0139 ± 0.0028`** |
+| **Proposed Dual-Branch + Label Smoothing (0.08)** | `0.100 ± 0.041` | `+0.7513 ± 0.0879` | `0.0284 ± 0.0100` |
 
-## 5. References
-1. Kasatkin, V., Mozgunov, E., Ezzell, N., Mishra, U., Hen, I., & Lidar, D. A. (2024). *ClassiFIM: An Unsupervised Method To Detect Phase Transitions.* arXiv:2408.03323.
-2. Harshith, Y. S., et al. (2026). *A Hybrid Deep Learning Approach for Multi-Class Eye Disease Classification.* Springer LNEE, Confluence 2026 proceedings (accepted, in production).
+![3-Seed ClassiFIM Ablation Study](Upgraded_ClassiFIM_3Seed_Ablation.png)
+
+### Key Scientific Takeaway
+Both convolutional architectures dramatically outperform the unregularized MLP baseline, which suffers severe log-odds inflation in the noisy disordered tail ($\lambda > 1.2$). Crucially, the ablation reveals that **the simpler translation-invariant 1D-CNN without label smoothing outperforms the more complex label-smoothed dual-branch model on every metric** ($R^2 = +0.8780$ vs. $+0.7513$; MSE $0.0139$ vs. $0.0284$). Because `ClassiFIM` relies on log-odds curvature, spatial averaging via `Conv1D + GlobalAveragePooling1D` effectively filters uncorrelated bit-flip noise, whereas aggressive label smoothing ($\epsilon = 0.08$) caps extreme log-odds and slightly broadens the estimated susceptibility peak.
+
+## 5. Limitations and Next Steps
+1. Evaluate on the official `USCqserver/classifim` benchmark datasets (e.g., 2D Ising and Rydberg atom arrays) using the unified conditional classifier $P(y=1 \mid x, \lambda)$ from Kasatkin et al. (2024).
+2. Sweep smaller label-smoothing values ($\epsilon \in [0.005, 0.02]$) and $L_2$ penalties to quantify the exact bias-variance trade-off in log-odds FIM estimation.
+
+## 6. References
+1. Kasatkin, V., Mozgunov, E., Ezzell, N., Mishra, U., Hen, I., & Lidar, D. A. (2024). *ClassiFIM: An Unsupervised Method To Detect Phase Transitions.* arXiv:2408.03323. GitHub: `USCqserver/classifim`.
+2. Harshith, Y. S., Menariya, N., Nagendra Babu, S. S. V., Venkateswaran, S., Batchu, R. K., & Kumar, C. (2026). *A Hybrid Deep Learning Approach for Multi-Class Eye Disease Classification.* Springer LNEE, Proceedings of Confluence 2026 (accepted, in production).
