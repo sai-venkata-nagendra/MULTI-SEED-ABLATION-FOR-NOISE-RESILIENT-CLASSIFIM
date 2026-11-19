@@ -7,7 +7,7 @@ A 3-seed ablation study inspired by the `ClassiFIM` framework from Prof. Daniel 
 ## 1. Motivation
 In **Kasatkin et al. (2024)** ([arXiv:2408.03323](https://arxiv.org/abs/2408.03323)), the authors estimate the Fisher Information Metric (FIM) $\chi_F(\lambda)$ by training a binary classifier to distinguish projective measurement bitstrings from neighboring parameter values $\lambda - \delta\lambda$ and $\lambda + \delta\lambda$, then computing the variance of the predicted log-odds:
 
-<img width="472" height="83" alt="image" src="https://github.com/user-attachments/assets/36a7223a-0000-4345-aa14-8a3f7622384c" />
+                     <img width="472" height="83" alt="image" src="https://github.com/user-attachments/assets/36a7223a-0000-4345-aa14-8a3f7622384c" />
 
 
 When bitstrings are corrupted by hardware readout (SPAM) bit-flips, unregularized MLPs can overfit to random noise in the disordered phase, pushing predicted probabilities toward $0$ or $1$ and causing log-odds variance explosion. This repository tests whether convolutional inductive bias and label smoothing (from our Springer LNEE medical-imaging work) stabilize FIM estimation under **8% simulated readout bit-flip noise**.
